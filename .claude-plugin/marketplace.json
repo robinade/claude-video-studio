@@ -1,0 +1,13 @@
+{
+  "name": "claude-video-studio",
+  "owner": {
+    "name": "robinade"
+  },
+  "description": "영상 감독실: 한 줄 요청으로 맞는 영상 도구를 골라 계획·제작·소리·검사·완성까지 진행 보드로 보여 주는 한국어 Claude Code mod.",
+  "plugins": [
+    {
+      "name": "video-studio",
+      "source": "./video-studio"
+    }
+  ]
+}

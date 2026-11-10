@@ -1,0 +1,5 @@
+# Written by Claude Code each time the mod loads; machine-specific (lists this machine's MCP tools).
+*/.claude-plugin/types/
+.DS_Store
+# Completion-test run logs contain local paths and session details.
+video-studio/judge/completion/logs/

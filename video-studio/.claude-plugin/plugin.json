@@ -1,0 +1,9 @@
+{
+  "name": "video-studio",
+  "version": "0.1.1",
+  "description": "영상 감독실: 어떤 영상이 필요한지 한 줄로 말하면 맞는 영상 도구를 골라 계획·제작·소리·검사·완성까지 보드로 보여 주고, 돈 드는 단계는 허락받은 뒤에만 진행해요.",
+  "author": { "name": "robinade", "url": "https://github.com/robinade" },
+  "repository": "https://github.com/robinade/claude-video-studio",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
