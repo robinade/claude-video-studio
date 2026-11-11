@@ -203,15 +203,19 @@ const VOICE_RULE: Record<VoiceChoice, string> = {
 
 export const TAG = '[영상 감독실]'
 
+/** 지시문에 넣는 이 컴퓨터의 도구 위치: video-director 검사 스크립트 폴더와 그걸 돌릴 파이썬. */
+export type ToolEnv = { scripts: string; python: string }
+export const DEFAULT_ENV: ToolEnv = { scripts: '~/video-studio/vendor/video-director/video-director/scripts', python: 'python3' }
+
 /** [시작]을 누르면 Claude 에게 가는 지시문. */
-export const workPrompt = (p: PlanInput): string => {
+export const workPrompt = (p: PlanInput, env: ToolEnv = DEFAULT_ENV): string => {
   const noSound = p.tool === 'watch' || p.tool === 'video-director'
   const checkOnly = p.tool === 'video-director' || p.tool === 'watch'
   const lines = [
     `${TAG} 프로젝트 ${p.id} 를 시작해요.`,
     `요청: ${p.request}`,
     `만드는 도구: ${TOOLS[p.tool].name} · 크기 ${p.aspect} (${sizeFor(p.aspect)})${p.seconds ? ` · 길이 약 ${p.seconds}초` : ''} · 언어 ${p.lang === 'ko' ? '한국어' : '영어'}`,
-    `결과 폴더: ${p.dir} (모든 산출물은 이 폴더 안에. 설치된 스킬 원본 ~/video-studio/vendor 는 고치지 않아요.)`,
+    `결과 폴더: ${p.dir} (모든 산출물은 이 폴더 안에. 설치된 영상 도구(스킬)의 원본 파일은 고치지 않아요.)`,
     '',
     '진행 규칙:',
     `- 단계마다 시작할 때와 끝날 때 mcp__video-studio__report 도구로 알려요(project: "${p.id}", stage: plan·make·sound·check·done, status: doing·done·fail·skip, 한 줄 note, 만든 파일 artifact). project 는 매번 꼭 넣어요(창이 여러 개여도 이 프로젝트에 붙게). 이 보고가 사용자의 진행 보드예요.`,
@@ -219,13 +223,14 @@ export const workPrompt = (p: PlanInput): string => {
     `- ${VOICE_RULE[p.voice]}`,
     `- 돈 드는 서비스(Kling, ElevenLabs, OpenAI TTS, 이미지 모델)는 mcp__video-studio__ask_spend(project: "${p.id}")로 금액을 올리고 허락 메시지가 올 때까지 쓰지 않아요. 허락 없이 부르면 막혀요.`,
     '- 업로드·게시·설정 파일(CLAUDE.md) 수정은 하지 않아요.',
+    '- 스킬 이름은 설치 방식에 따라 `huashu-motion` 이나 `huashu-motion:huashu-motion` 처럼 앞에 플러그인 이름이 붙어 있을 수 있어요. Skill 도구 목록에 있는 이름 그대로 불러요.',
     `- 검사 기준을 처음부터 지켜요(qa_video 가 재는 값이에요): 첫 3초 훅 글자 ${p.aspect === '16:9' ? '1080 높이' : '1080 폭'} 기준 84px 이상, 설명·CTA 글자 48px 이상, 글자와 바로 뒤 배경의 대비 7:1 이상(밝은 배경엔 진한 글자, 사진 위엔 진한 판), 음량 -14 LUFS(±1)·실제 최고점 -1 dBTP 이하. timeline.json 의 cuts 에는 딱 끊기는 컷만 적고(서서히 겹치는 전환은 빼요), 계획한 정적(silences)은 정말 -30 dBFS 아래로 비워요.`,
     p.auto
       ? '- 사람 손 없이 끝까지 가는 무인 모드예요. 사용자에게 묻지 말고 합리적인 기본값으로 정해서 끝까지 진행해요.'
       : '- 사용자가 확인해야 할 게 있으면 report 의 next_action 에 한 줄로 남기고, 막히지 않는 건 기본값으로 정해 계속해요.',
     '',
     '단계:',
-    `1. 계획(plan): video-director 방식으로 ${p.dir}/timeline.json 을 써요(장면·시간·화면 글자와 role(hook/cta/term)·박스, meta.loop 여부). \`python3 ~/video-studio/vendor/video-director/video-director/scripts/check_timeline.py ${p.dir}/timeline.json\` 로 검사해 통과시켜요.${noSound ? ' (이 요청은 계획을 짧게 해도 돼요.)' : ''}`,
+    `1. 계획(plan): video-director 방식으로 ${p.dir}/timeline.json 을 써요(장면·시간·화면 글자와 role(hook/cta/term)·박스, meta.loop 여부). \`${env.python} ${env.scripts}/check_timeline.py ${p.dir}/timeline.json\` 로 검사해 통과시켜요.${noSound ? ' (이 요청은 계획을 짧게 해도 돼요.)' : ''}`,
     `2. 제작(make): ${MAKE_STEPS[p.tool](p)}`,
     noSound || p.tool === 'rossark'
       ? '3. 소리(sound): 이 영상은 소리 단계가 없어요. report(stage=sound, status=skip).'

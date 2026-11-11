@@ -4,6 +4,7 @@ import type { Engine } from 'claude-code/testing'
 
 import { bandLine, newProject, parseEar, parseQa, PAID_BASH, PAID_TOOL, pickActive, RENDER_BASH } from './register'
 import { displayWidth } from './text'
+import { PREP_VERSION, installPath, parsePrepLine, prepSummary, scriptDirs, shouldPrepare } from './tools'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
@@ -14,12 +15,17 @@ const PANE = {
 } as const
 
 // 엔진 아래 세상: 저장소·프롬프트·프로세스(가짜 qa_video·earshot 결과).
-const world = async ($: Engine, on: On, surface: (typeof SURFACES)[number]) => {
+const world = async (
+  $: Engine,
+  on: On,
+  surface: (typeof SURFACES)[number],
+  opts: { files?: string[]; reads?: Record<string, string> } = {},
+) => {
   mock.clock(on)
   const store: Record<string, unknown> = {}
   const submitted: string[] = []
   const ran: string[][] = []
-  const files = new Set<string>()
+  const files = new Set<string>([...(opts.files ?? []), ...Object.keys(opts.reads ?? {})])
   on('store.get', async ($, e) => ({ value: store[e.key] }))
   on('store.set', async ($, e) => ((store[e.key] = e.value), { value: undefined }))
   on('prompt.submit', async ($, e) => (submitted.push(e.text), { text: e.text }))
@@ -32,7 +38,9 @@ const world = async ($: Engine, on: On, surface: (typeof SURFACES)[number]) => {
   on('session.id', async () => ({ value: 'sess-1' }))
   on('fs.exists', async ($, e) => ({ value: files.has(e.path) || /final\.mp4$/.test(e.path) }))
   on('fs.read', async ($, e) => ({
-    value: /report\.json$/.test(e.path)
+    value: opts.reads?.[e.path] !== undefined
+      ? opts.reads[e.path]
+      : /report\.json$/.test(e.path)
       ? JSON.stringify({ checks: [{ level: 'PASS', check: 'frame 0', detail: 'ok' }, { level: 'WARN', check: 'pops', detail: 'x' }] })
       : JSON.stringify({ verdict: 'close', score: 0.91, critical_issues: 0, actions: [] }),
   }))
@@ -184,5 +192,84 @@ test('보고에 project 를 주면 지금 창과 상관없이 그 프로젝트�
   await $.tool.call({ tool: 'mcp__video-studio__start', request: '영어 설명 영상 30초 English explainer' })
   const r = await $.tool.call({ tool: 'mcp__video-studio__report', stage: 'make', status: 'doing', note: '첫 프로젝트 보고', project: 'nope' } as never)
   expect(JSON.stringify(r)).toContain('보드에 올렸어요')
+  await ui.unmount()
+})
+
+// ---- 영상 도구 설치 위치·첫 실행 준비
+const INSTALLED = '/Users/tester/plugins/installed_plugins.json'
+const installed = (names: Record<string, string>) =>
+  JSON.stringify({ version: 2, plugins: Object.fromEntries(Object.entries(names).map(([n, p]) => [`${n}@claude-video-studio`, [{ scope: 'user', installPath: p }]])) })
+const flush = async () => {
+  for (let i = 0; i < 20; i++) await new Promise(r => setTimeout(r, 5))
+}
+
+test('도구 위치 찾기·준비 줄 읽기', () => {
+  const inst = JSON.parse(installed({ 'video-director': '/cache/vd' }))
+  expect(installPath(inst, 'video-director')).toBe('/cache/vd')
+  expect(installPath(inst, 'earshot')).toBe(undefined)
+  expect(installPath(undefined, 'earshot')).toBe(undefined)
+  expect(scriptDirs('/h', '/cache/vd')[0]).toBe('/cache/vd/video-director/scripts')
+  expect(scriptDirs('/h').at(-1)).toBe('/h/video-studio/vendor/video-director/video-director/scripts')
+  expect(parsePrepLine('@ earshot doing 소리 검사 도구 설치 (약 1.5GB)')).toEqual({ step: 'earshot', status: 'doing', msg: '소리 검사 도구 설치 (약 1.5GB)' })
+  expect(parsePrepLine('Collecting torch')).toBe(undefined)
+  expect(prepSummary({ py: { status: 'done', msg: '' }, ffmpeg: { status: 'skip', msg: '' }, earshot: { status: 'fail', msg: '' } })).toBe('새로 설치 1 · 이미 있음 1 · 실패 1')
+  const now = Date.parse('2026-11-11T12:00:00Z')
+  expect(shouldPrepare(undefined, now)).toBe(true)
+  expect(shouldPrepare({ version: PREP_VERSION, ok: true, at: '2026-11-11T11:00:00Z' }, now)).toBe(false)
+  expect(shouldPrepare({ version: PREP_VERSION, ok: false, at: '2026-11-11T11:00:00Z' }, now)).toBe(false)
+  expect(shouldPrepare({ version: PREP_VERSION, ok: false, at: '2026-11-11T01:00:00Z' }, now)).toBe(true)
+  expect(shouldPrepare({ version: PREP_VERSION - 1, ok: true, at: '2026-11-11T11:00:00Z' }, now)).toBe(true)
+})
+
+test('마켓플레이스로 설치했으면 첫 세션에 영상 도구 준비를 뒤에서 돌리고 패널에 보여 줘요', async ($, on) => {
+  const toasts: string[] = []
+  on('ui.toast', async ($, e) => (toasts.push(e.text), { value: undefined }))
+  const spawned: { argv: string[]; env?: Record<string, string> }[] = []
+  let release: () => void = () => undefined
+  const gate = new Promise<void>(r => (release = r))
+  on('process.spawn', async function* ($, e) {
+    spawned.push({ argv: [...e.argv], env: e.env })
+    yield { stream: 'stdout' as const, text: '@ py doing 검사용 파이썬 패키지(numpy·Pillow) 설치\n' }
+    await gate
+    yield { stream: 'stdout' as const, text: '@ py done 준비됐어요\n@ earshot skip 이미 있어요\n@ all done true\n' }
+    return { value: { code: 0, signal: null } }
+  } as never)
+  const { ui } = await world($, on, 'terminal', {
+    reads: { [INSTALLED]: installed({ 'video-studio': '/cache/vs', earshot: '/cache/earshot', reanimate: '/cache/re' }) },
+  })
+  await flush()
+  expect(spawned.length).toBe(1)
+  expect(spawned[0].argv.join(' ')).toContain('setup/prepare.sh')
+  expect(spawned[0].env?.EARSHOT_ROOT).toBe('/cache/earshot')
+  expect(spawned[0].env?.REANIMATE_ROOT).toBe('/cache/re')
+  expect(spawned[0].env?.VS_TOOLS).toBe('/Users/tester/video-studio/tools')
+  expect(await ui.find({ type: 'Text', text: /영상 도구 준비 중: 검사용 파이썬/ })).toBeDefined()
+  release()
+  await flush()
+  expect(toasts.some(t => t.includes('영상 도구 준비 끝') && t.includes('새로 설치 1 · 이미 있음 1 · 실패 0'))).toBe(true)
+  expect(await ui.find({ type: 'Text', text: /영상 도구 준비 중/ })).toBe(undefined)
+  await ui.unmount()
+})
+
+test('--plugin-dir 로 띄웠으면(설치 기록 없음) 자동 준비를 돌리지 않아요', async ($, on) => {
+  const spawned: string[][] = []
+  on('process.spawn', async function* ($, e) {
+    spawned.push([...e.argv])
+    return { value: { code: 0, signal: null } }
+  } as never)
+  const { ui } = await world($, on, 'terminal')
+  await flush()
+  expect(spawned.length).toBe(0)
+  await ui.unmount()
+})
+
+test('자동 검사는 마켓플레이스로 설치한 video-director 의 qa_video.py 를 써요', async ($, on) => {
+  const { ran, ui } = await world($, on, 'terminal', {
+    reads: { [INSTALLED]: installed({ 'video-director': '/cache/vd' }) },
+    files: ['/cache/vd/video-director/scripts/qa_video.py'],
+  })
+  await $.tool.call({ tool: 'mcp__video-studio__start', request: '앱 홍보 릴스 20초' })
+  await $.tool.call({ tool: 'mcp__video-studio__report', stage: 'check', status: 'doing', artifact: '/Users/tester/video-studio/projects/x/final.mp4' })
+  expect(ran.some(a => a.includes('/cache/vd/video-director/scripts/qa_video.py'))).toBe(true)
   await ui.unmount()
 })

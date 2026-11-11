@@ -40,41 +40,44 @@
 
 단축키는 모두 숫자라서 한글 입력 상태에서도 먹어요. 자세한 화면 설명과 판정 결과는 [`video-studio/README.md`](video-studio/README.md)에 있어요.
 
-## 필요한 것
+## 함께 설치되는 것
 
-### 꼭 필요한 것 (자동 검사)
+영상 감독실을 설치하면 **영상 도구 9종이 플러그인으로 함께 설치돼요**(Kling 제외). 따로 설치할 필요가 없어요. 각 도구는 원작 저장소의 특정 커밋으로 고정해서, 원작이 바뀌어도 검증 안 된 코드가 자동으로 들어오지 않아요.
 
-- **video-director**: 완성본 검사 스크립트(`qa_video.py`, `check_timeline.py`)를 이 위치에서 찾아요.
-  ```bash
-  mkdir -p ~/video-studio/vendor ~/video-studio/projects
-  git clone https://github.com/win4r/video-director ~/video-studio/vendor/video-director
-  mkdir -p ~/.claude/skills
-  ln -s ~/video-studio/vendor/video-director/video-director ~/.claude/skills/video-director
-  python3 -m pip install numpy Pillow
-  ```
-- **ffmpeg / ffprobe**: `brew install ffmpeg` (macOS)
-- 결과는 모두 `~/video-studio/projects/<날짜-시각-도구>/` 에 모여요.
+| 도구 | 이럴 때 고름 | 원작 저장소 | 고정한 커밋 |
+|---|---|---|---|
+| huashu-motion | 앱 홍보·런칭 영상, 음악 박자 모션그래픽, 데이터 영상, 한국어 내레이션 | [alchaincyf/huashu-motion](https://github.com/alchaincyf/huashu-motion) | `52467f9` |
+| take-one | 이야기형 광고, 브랜드 필름, 뮤직비디오 | [talsiach/take-one](https://github.com/talsiach/take-one) | `830621c` |
+| argo-guide | 실제 앱을 자동으로 눌러 가며 녹화한 데모 | [shreyaskarnik/argo](https://github.com/shreyaskarnik/argo) | `5f71549` |
+| explainroo | 영어 주제 설명 영상(대본·목소리·그림·자막 자동) | [vincentsch/explainroo](https://github.com/vincentsch/explainroo) | `e95232c` |
+| rossark-motion-skill | 앱 속 마스코트·아이콘 애니메이션 | [rossark0/rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) | `9b20964` |
+| reanimate | 남의 사이트·영상 애니메이션을 내 코드로 복제 | [NiazMorshed2007/reanimate](https://github.com/NiazMorshed2007/reanimate) | `3f7a55a` |
+| earshot (+ real-sound) | 효과음·음량·소리 싱크, 실제 녹음 음원 사운드트랙 | [Leonxlnx/earshot](https://github.com/Leonxlnx/earshot) | `591fa3e` |
+| watch | 참고 영상 분석(컷·훅·구성) | [bradautomates/claude-video](https://github.com/bradautomates/claude-video) | `03ceb42` |
+| video-director | 계획표 검사, 완성본 측정 검사 | [win4r/video-director](https://github.com/win4r/video-director) | `4747e5c` |
 
-### 있으면 소리 검사까지
+Kling(실사 장면 생성, 유료)은 함께 설치하지 않아요. 쓰려면 Kling MCP를 따로 연결하세요. 영상 감독실은 Kling 호출을 허락 전까지 막아요.
 
-- **earshot**: [저장소 README](https://github.com/Leonxlnx/earshot)대로 설치해서 `earshot` 명령이 PATH에 있게 해요. 없으면 소리 검사만 건너뛰어요.
+### 첫 실행 때 자동 준비
 
-### 만드는 도구 (쓰고 싶은 것만)
+스킬 파일만으로는 돌지 않는 도구가 있어요(파이썬 환경, 소리 모델, npm 패키지 등). 영상 감독실을 설치하고 **처음 Claude Code를 켜면, 뒤에서 아래를 자동으로 설치해요.** 입력창 위 띠에 진행이 보이고, 끝나면 알림이 떠요. 이미 있는 것은 건너뛰어요.
 
-mod가 요청에 맞는 도구를 골라 Claude에게 그 스킬을 쓰라고 시켜요. 설치된 도구만 실제로 쓸 수 있어요. 각 저장소의 설치 방법을 따라 주세요.
-
-| 도구 | 이럴 때 고름 | 저장소 |
+| 준비물 | 설치 위치 | 대략 크기 |
 |---|---|---|
-| huashu-motion | 앱 홍보·런칭 영상, 음악 박자 모션그래픽, 데이터 영상, 한국어 내레이션 | [alchaincyf/huashu-motion](https://github.com/alchaincyf/huashu-motion) |
-| take-one | 이야기형 광고, 브랜드 필름, 뮤직비디오 | [talsiach/take-one](https://github.com/talsiach/take-one) |
-| Argo | 실제 앱을 자동으로 눌러 가며 녹화한 데모 | [shreyaskarnik/argo](https://github.com/shreyaskarnik/argo) |
-| explainroo | 영어 주제 설명 영상(대본·목소리·그림·자막 자동) | [vincentsch/explainroo](https://github.com/vincentsch/explainroo) |
-| rossark-motion-skill | 앱 속 마스코트·아이콘 애니메이션 | [rossark0/rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) |
-| reanimate | 남의 사이트·영상 애니메이션을 내 코드로 복제 | [NiazMorshed2007/reanimate](https://github.com/NiazMorshed2007/reanimate) |
-| earshot · real-sound | 효과음·음량·소리 싱크, 실제 녹음 음원 사운드트랙 | [Leonxlnx/earshot](https://github.com/Leonxlnx/earshot) |
-| watch | 참고 영상 분석(컷·훅·구성) | [bradautomates/claude-video](https://github.com/bradautomates/claude-video) |
-| video-director | 계획표 검사, 완성본 측정 검사 | [win4r/video-director](https://github.com/win4r/video-director) |
-| Kling | 실사 장면 생성(유료, 허락 후에만) | Kling MCP |
+| ffmpeg·ffprobe (없을 때만) | Homebrew | — |
+| 자동 검사용 파이썬(numpy·Pillow) | `~/video-studio/tools/py` | 60MB |
+| earshot 명령 + 소리 모델 2개 | `~/video-studio/tools/earshot`, `~/.local/bin/earshot` | 2.4GB |
+| explainroo 명령 + 목소리 모델 | `~/.explainroo` | 1GB |
+| reanimate 스크립트 의존성 + Chromium | 플러그인 폴더 안, Playwright 캐시 | 700MB |
+
+macOS 에 아무것도 없는 상태에서 다 받으면 모두 약 4GB, 만든 사람 컴퓨터에서 시험했을 때 약 5분 걸렸어요. 인터넷이 느리면 더 걸려요. 그동안에도 영상 감독실과 다른 도구는 쓸 수 있어요.
+
+- 상황 보기: `/video-setup` · 지금 다시 준비: `/video-setup run` · 기록: `~/video-studio/tools/prepare.log`
+- 자동 준비를 끄려면 환경 변수 `VIDEO_STUDIO_PREPARE=0`
+- 필요한 것: macOS(Homebrew 권장), Python 3.10 이상, Node.js 20.11 이상. bun 이 없으면 Homebrew 로 설치해요.
+- huashu-motion 악기 샘플, take-one·watch·Argo 의 선택 항목은 각 스킬이 처음 쓸 때 스스로 준비해요.
+- 결과 영상은 모두 `~/video-studio/projects/<날짜-시각-도구>/` 에 모여요.
+- 같은 도구를 다른 곳에서 이미 설치했다면(예: `argo-guide@argo-video`) 스킬이 두 벌 보일 수 있어요. 한쪽을 끄면 돼요: `claude plugin disable argo-guide@argo-video`
 
 ## 설치
 
@@ -88,8 +91,8 @@ mod가 요청에 맞는 도구를 골라 Claude에게 그 스킬을 쓰라고 �
 아래 순서대로 진행해 줘.
 1. `claude plugin marketplace add robinade/claude-video-studio`를 실행해. 이미 추가돼 있다고 나오면 다음 단계로 넘어가.
 2. `claude plugin install video-studio@claude-video-studio`를 실행해. 설치 범위는 기본값 user로 둬.
-3. `claude plugin list`로 video-studio가 enabled인지 확인해.
-4. 저장소 README의 "꼭 필요한 것"(video-director·ffmpeg)이 이 컴퓨터에 있는지 확인하고, 없으면 무엇을 설치할지 나에게 먼저 물어.
+3. `claude plugin list`로 video-studio와 함께 설치된 영상 도구 9종(huashu-motion, take-one, argo-guide, explainroo, rossark-motion-skill, reanimate, earshot, watch, video-director)이 모두 enabled인지 확인해.
+4. Claude Code를 다시 시작하면 영상 감독실이 영상 도구 준비물(파이썬 환경·소리 모델 등, 몇 GB)을 뒤에서 설치한다고 알려 줘. 진행은 `/video-setup`으로 볼 수 있어.
 
 지켜 줘.
 - `plugin` 명령이 "not run from this spelling"으로 거부되면 `claude`가 다른 프로그램의 래퍼라서 그래. `which -a claude`로 실제 실행 파일을 찾아 그걸로 다시 실행해.
@@ -107,7 +110,7 @@ mod가 요청에 맞는 도구를 골라 Claude에게 그 스킬을 쓰라고 �
 /plugin install video-studio@claude-video-studio
 ```
 
-설치 없이 한 번만 써 보려면:
+설치 없이 한 번만 써 보려면(이때는 영상 도구가 함께 설치되지 않아요):
 
 ```bash
 git clone https://github.com/robinade/claude-video-studio

@@ -2,9 +2,12 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { EarResult, Project, QaResult, Stage, StageKey, StageStatus, VideoToolId, VoiceChoice } from '../types'
-import { TAG, TOOLS, VOICE_LABEL, koreanWarnings, minutesText, sizeFor, slugFor, voiceOptions, workPrompt } from './plan.ts'
+import { DEFAULT_ENV, TAG, TOOLS, VOICE_LABEL, koreanWarnings, minutesText, sizeFor, slugFor, voiceOptions, workPrompt } from './plan.ts'
+import type { ToolEnv } from './plan.ts'
 import { isVideoIntent, route } from './route.ts'
 import { clipWidth, displayWidth, padWidth } from './text.ts'
+import { STEP_LABEL, installPath, parsePrepLine, prepSummary, scriptDirs, shouldPrepare } from './tools.ts'
+import type { Prep, PrepStatus } from './tools.ts'
 
 const PLUGIN = 'video-studio'
 const PANE = 'video-studio'
@@ -18,11 +21,12 @@ const lastToastAt = atom({ plugin: 'video-studio', key: 'lastToastAt' } as const
 const tick = atom({ plugin: 'video-studio', key: 'tick' } as const, 0)
 const suggestion = atom({ plugin: 'video-studio', key: 'suggestion' } as const, null as { text: string; at: number } | null)
 const draft = atom({ plugin: 'video-studio', key: 'draft' } as const, '')
+// 영상 도구 첫 실행 준비(setup/prepare.sh)의 진행 상황.
+const prep = atom({ plugin: 'video-studio', key: 'prep' } as const, { running: false, steps: {} } as Prep)
 
 const STORE_KEY = 'projects-1'
 // 첫 화면을 보여 달라는 표시(진행 중 프로젝트를 자동으로 이어 받지 않게).
 const HOME_VIEW = '-'
-const QA_SCRIPT = 'video-studio/vendor/video-director/video-director/scripts/qa_video.py'
 
 export const STAGES: readonly { key: StageKey; label: string }[] = [
   { key: 'plan', label: '계획' },
@@ -237,6 +241,126 @@ const setStage = (p: Project, key: StageKey, stage: Stage): Project => ({
 
 const home = async ($: EngineInterface) => (await $.env.get('HOME')) ?? '.'
 
+const readJson = async ($: EngineInterface, path: string): Promise<unknown> => {
+  try {
+    if (!(await $.fs.exists(path))) return undefined
+    return JSON.parse(String(await $.fs.read(path)))
+  } catch {
+    return undefined
+  }
+}
+
+/** 설치 기록(installed_plugins.json). 마켓플레이스로 설치한 영상 도구들의 폴더가 여기 있어요. */
+const installedPlugins = async ($: EngineInterface) => {
+  const dir = (await $.env.get('CLAUDE_CONFIG_DIR')) || `${await home($)}/.claude`
+  return readJson($, `${dir}/plugins/installed_plugins.json`)
+}
+
+/** 이 컴퓨터의 도구 위치: 검사 스크립트 폴더(마켓플레이스 설치 → ~/.claude/skills → ~/video-studio/vendor 순)와 파이썬. */
+const resolveTools = async ($: EngineInterface): Promise<ToolEnv & { installed: unknown }> => {
+  const h = await home($)
+  const installed = await installedPlugins($)
+  const dirs = scriptDirs(h, installPath(installed, 'video-director'))
+  let scripts = dirs[dirs.length - 1]
+  for (const d of dirs)
+    if (await $.fs.exists(`${d}/qa_video.py`)) {
+      scripts = d
+      break
+    }
+  const venv = `${h}/video-studio/tools/py/bin/python`
+  const python = (await $.fs.exists(venv)) ? venv : DEFAULT_ENV.python
+  return { scripts, python, installed }
+}
+
+/**
+ * 영상 도구 첫 실행 준비: setup/prepare.sh 를 뒤에서 돌리고 띠·패널에 진행을 보여 줘요.
+ * auto 는 세션 시작 때 부른 것: 이 mod 가 마켓플레이스로 설치됐고, 준비가 아직이거나 판이 바뀌었을 때만 돌아요.
+ */
+const prepare = async ($: EngineInterface, auto: boolean): Promise<string> => {
+  if ((await read($, prep)).running) return '영상 도구를 준비하는 중이에요.'
+  const h = await home($)
+  const toolsDir = `${h}/video-studio/tools`
+  const t = await resolveTools($)
+  if (auto) {
+    if ((await $.env.get('VIDEO_STUDIO_PREPARE')) === '0') return ''
+    if (!installPath(t.installed, 'video-studio')) return ''
+    if (!shouldPrepare(await readJson($, `${toolsDir}/prepared.json`), await $.clock.now())) return ''
+  }
+  const env: Record<string, string> = {
+    VS_TOOLS: toolsDir,
+    PATH: `${h}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`,
+  }
+  for (const [k, n] of [['EARSHOT_ROOT', 'earshot'], ['EXPLAINROO_ROOT', 'explainroo'], ['REANIMATE_ROOT', 'reanimate']] as const) {
+    const r = installPath(t.installed, n)
+    if (r) env[k] = r
+  }
+  await update($, prep, () => ({ running: true, steps: {} }))
+  let child
+  try {
+    child = $.process.spawn({ argv: ['/bin/bash', `${$.plugin.root}/setup/prepare.sh`], env })
+  } catch (err) {
+    await update($, prep, () => ({ running: false, steps: {}, ok: false }))
+    return `영상 도구 준비를 시작하지 못했어요: ${String(err).slice(0, 200)}`
+  }
+  void (async () => {
+    let buf = ''
+    let busy = false
+    try {
+      for await (const { text } of child) {
+        buf += text
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+        for (const line of lines) {
+          const m = parsePrepLine(line)
+          if (!m) continue
+          if (m.step === 'all') {
+            if (m.status === 'busy') busy = true
+            continue
+          }
+          await update($, prep, x => ({
+            ...x,
+            current: m.status === 'doing' ? m.step : x.current === m.step ? undefined : x.current,
+            steps: { ...x.steps, [m.step]: { status: m.status as PrepStatus, msg: m.msg } },
+          }))
+        }
+      }
+    } catch {
+      // 세션이 끝나면 준비도 멈춰요. 다음 세션에서 남은 것부터 이어요.
+    }
+    try {
+      const steps = (await read($, prep)).steps
+      const ok = !Object.values(steps).some(s => s.status === 'fail')
+      const endedAt = await $.clock.now()
+      await update($, prep, x => ({ ...x, running: false, current: undefined, endedAt, ok }))
+      if (busy) return
+      const installedNew = Object.values(steps).some(s => s.status === 'done')
+      if (installedNew || !ok)
+        $.ui.toast(`🎬 영상 도구 준비 ${ok ? '끝' : '일부 실패'} · ${prepSummary(steps)}${ok ? '' : ' · /video-setup 으로 자세히'}`, { timeoutMs: 8000 })
+    } catch {
+      // 창을 닫는 중이면 mod 가 먼저 내려가요. 그때는 알릴 곳이 없어요.
+    }
+  })()
+  return '영상 도구 준비를 시작했어요. 입력창 위 띠에서 진행을 볼 수 있어요.'
+}
+
+/** 준비 상황 여러 줄(/video-setup). */
+const prepReport = async ($: EngineInterface) => {
+  const x = await read($, prep)
+  const h = await home($)
+  const marker = (await readJson($, `${h}/video-studio/tools/prepared.json`)) as { at?: string; steps?: Record<string, string> } | undefined
+  const rows = Object.keys(STEP_LABEL).map(k => {
+    const s = x.steps[k]
+    const last = marker?.steps?.[k]
+    const icon = s ? (s.status === 'doing' ? '◐' : s.status === 'fail' ? '✗' : '●') : last === 'ok' ? '●' : last === 'fail' ? '✗' : '○'
+    return `${icon} ${STEP_LABEL[k]}${s?.msg ? ` · ${s.msg}` : last ? ` · 지난 결과 ${last === 'ok' ? '준비됨' : '실패'}` : ''}`
+  })
+  return [
+    x.running ? '영상 도구 준비 중이에요.' : marker?.at ? `마지막 준비: ${marker.at}` : '아직 준비한 적이 없어요.',
+    ...rows,
+    `기록: ${h}/video-studio/tools/prepare.log`,
+  ].join('\n')
+}
+
 const openPane = ($: EngineInterface, focus = true) =>
   $.ui.open(focus ? { id: PANE, title: TITLE, focus: true, columns: 64, rows: 30 } : { id: PANE, title: TITLE, columns: 64, rows: 30 })
 
@@ -250,8 +374,9 @@ const addProject = async ($: EngineInterface, project: Project) => {
 /** [시작]: 보드로 바꾸고 Claude 에게 지시문을 보내요. */
 const start = async ($: EngineInterface, id: string, deferred = false) => {
   let prompt = ''
+  const env = await resolveTools($)
   await patch($, id, p => {
-    prompt = workPrompt({ ...p, tool: p.tool })
+    prompt = workPrompt({ ...p, tool: p.tool }, env)
     return { ...setStage({ ...p, phase: 'running' }, 'plan', { status: 'doing', note: 'Claude 에게 계획을 맡겼어요' }) }
   })
   const p = (await read($, projects)).find(x => x.id === id)
@@ -279,9 +404,10 @@ export const runChecks = async ($: EngineInterface, id: string, video: string): 
   const timeline = `${p.dir}/timeline.json`
   const hasTimeline = await $.fs.exists(timeline)
   const loop = p.tool === 'rossark'
+  const tools = await resolveTools($)
   const qaCmd = [
-    'python3',
-    `${h}/${QA_SCRIPT}`,
+    tools.python,
+    `${tools.scripts}/qa_video.py`,
     video,
     '--out',
     out,
@@ -360,6 +486,7 @@ export const register: Register = on => {
       { name: 'video-status', description: '영상 감독실: 지금 프로젝트의 단계·검사 점수 보기' },
       { name: 'video-qa', description: '영상 감독실: 영상 파일 하나를 qa_video + earshot 으로 검사', argumentHint: '<영상 파일 경로>' },
       { name: 'video-open', description: '영상 감독실: 지금 프로젝트의 결과 폴더 열기' },
+      { name: 'video-setup', description: '영상 감독실: 영상 도구 준비 상황 보기·다시 준비하기', argumentHint: '[run 이면 지금 다시 준비]' },
     ])
       await $.command.register(c)
 
@@ -417,7 +544,10 @@ export const register: Register = on => {
         if (p?.phase === 'running' && (p.progress || p.qaRunning)) await update($, tick, n => n + 1)
       })()
     })
-    return next(e)
+    const started = await next(e)
+    // 마켓플레이스로 설치한 뒤 처음 켜졌으면, 영상 도구 준비물(파이썬 환경·모델·패키지)을 뒤에서 깔아요.
+    void prepare($, true).catch(() => undefined)
+    return started
   })
 
   // 턴이 끝났을 때: 완성 전이면 보드를 ⏸ 멈춤으로, 영상 이야기였는데 시작하지 않았으면 그때 제안.
@@ -467,8 +597,9 @@ export const register: Register = on => {
     const text = String(input.request ?? '').trim()
     if (!text) return { deny: 'request 가 필요해요.' }
     const cur = await active($)
+    const env = await resolveTools($)
     if (cur && cur.phase === 'running' && cur.request === text)
-      return { result: `이미 진행 중인 프로젝트예요.\n${workPrompt(cur)}` }
+      return { result: `이미 진행 중인 프로젝트예요.\n${workPrompt(cur, env)}` }
     const now = await $.clock.now()
     const p = newProject(text, now, await home($), false)
     const started = { ...setStage({ ...p, phase: 'running' as const }, 'plan', { status: 'doing' as const }) }
@@ -478,7 +609,7 @@ export const register: Register = on => {
     void openPane($, false)
     $.ui.toast(`🎬 영상 감독실이 시작했어요 (${TOOLS[p.tool].name}) · ${BAND_KEY} 보드 보기`, { timeoutMs: 6000 })
     return {
-      result: `${workPrompt(started)}\n\n(영상 감독실이 고른 도구: ${TOOLS[p.tool].name} — ${p.reason} 사용자가 다른 도구를 원했다면 그 도구로 바꿔도 돼요.)`,
+      result: `${workPrompt(started, env)}\n\n(영상 감독실이 고른 도구: ${TOOLS[p.tool].name} — ${p.reason} 사용자가 다른 도구를 원했다면 그 도구로 바꿔도 돼요.)`,
     }
   })
 
@@ -620,13 +751,22 @@ export const register: Register = on => {
     return { text }
   })
 
+  on('command.run', { command: 'video-setup' }, async ($, e) => {
+    if ((e.args ?? '').trim() === 'run') {
+      const msg = await prepare($, false)
+      return { text: msg }
+    }
+    return { text: `${await prepReport($)}\n\n지금 다시 준비하려면: /video-setup run` }
+  })
+
   on('command.run', { command: 'video-open' }, async $ => {
     const p = await active($)
     if (!p) return { text: '열 프로젝트가 없어요.' }
     await $.process.run(['mkdir', '-p', p.dir])
     await $.process.run(['open', p.dir])
-    const studio =
-      p.tool === 'huashu-motion' ? '\n프레임에 댓글 달며 고치기: 프로젝트 폴더에서 `~/.claude/skills/huashu-motion/bin/om studio`' : ''
+    const huashu = installPath(await installedPlugins($), 'huashu-motion')
+    const om = huashu ? `${huashu}/skills/huashu-motion/bin/om` : '~/.claude/skills/huashu-motion/bin/om'
+    const studio = p.tool === 'huashu-motion' ? `\n프레임에 댓글 달며 고치기: 프로젝트 폴더에서 \`${om} studio\`` : ''
     return { text: `결과 폴더를 열었어요: ${p.dir}${studio}` }
   })
 
@@ -636,6 +776,7 @@ export const register: Register = on => {
     if (e.props.hasSurvey) return below
     const p = await active($)
     const sug = await read($, suggestion)
+    const pr = await read($, prep)
     await read($, tick)
     const now = await $.clock.now()
     const cols = e.props.bodyColumns ?? 80
@@ -645,6 +786,10 @@ export const register: Register = on => {
     if (p && (p.phase !== 'done' || now - p.createdAt < 6 * 3600_000) && p.phase !== 'failed') {
       label = bandLine(p, now, cols)
       press = () => void (p.phase === 'card' ? start($, p.id).then(() => openPane($, false)) : openPane($))
+    } else if (pr.running) {
+      const cur = pr.current ? pr.steps[pr.current] : undefined
+      label = clipWidth(`🎬 영상 감독실 · 영상 도구 준비 중${cur ? ` · ${cur.msg}` : ''}`, cols - 4)
+      press = () => void openPane($)
     } else if (sug && now - sug.at < 3 * 60_000) {
       label = clipWidth(`🎬 영상 감독실로 진행할까요? "${sug.text}"`, cols - 4)
       press = () =>
@@ -681,9 +826,16 @@ export const register: Register = on => {
     if (!p) {
       const recent = [...list].reverse().slice(0, 3)
       const d = await read($, draft)
+      const pr = await read($, prep)
+      const prepLine = pr.running
+        ? `◐ 영상 도구 준비 중${pr.current && pr.steps[pr.current] ? `: ${pr.steps[pr.current].msg}` : ''}`
+        : pr.ok === false
+          ? `✗ 영상 도구 일부를 준비하지 못했어요 · ${prepSummary(pr.steps)} · /video-setup`
+          : ''
       return (
         <Box flexDirection="column" gap={1}>
           <Text bold>어떤 영상이 필요해요?</Text>
+          {prepLine ? <Text dimColor>{clipWidth(prepLine, cols)}</Text> : null}
           {Input ? (
             <Input
               key="ask"

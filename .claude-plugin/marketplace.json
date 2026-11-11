@@ -3,11 +3,83 @@
   "owner": {
     "name": "robinade"
   },
-  "description": "영상 감독실: 한 줄 요청으로 맞는 영상 도구를 골라 계획·제작·소리·검사·완성까지 진행 보드로 보여 주는 한국어 Claude Code mod.",
+  "description": "영상 감독실: 한 줄 요청으로 맞는 영상 도구를 골라 계획·제작·소리·검사·완성까지 진행 보드로 보여 주는 한국어 Claude Code mod. 설치하면 영상 도구 스킬 9종이 함께 설치돼요.",
   "plugins": [
     {
       "name": "video-studio",
-      "source": "./video-studio"
+      "source": "./video-studio",
+      "description": "영상 감독실 mod: 도구 고르기·진행 보드·비용 문·자동 검사",
+      "dependencies": [
+        "huashu-motion",
+        "take-one",
+        "argo-guide",
+        "explainroo",
+        "rossark-motion-skill",
+        "reanimate",
+        "earshot",
+        "watch",
+        "video-director"
+      ]
+    },
+    {
+      "name": "huashu-motion",
+      "description": "런칭·홍보 영상, 음악 박자 모션그래픽, 데이터 영상 (alchaincyf/huashu-motion, MIT)",
+      "source": { "source": "github", "repo": "alchaincyf/huashu-motion", "sha": "52467f99c602b76ba86d511d37acdfe93fa1e16e" },
+      "license": "MIT",
+      "skills": ["./skills/huashu-motion"]
+    },
+    {
+      "name": "take-one",
+      "description": "이야기형 광고·브랜드 필름·뮤직비디오 (talsiach/take-one, MIT 이름·로고 제외)",
+      "source": { "source": "github", "repo": "talsiach/take-one", "sha": "830621cce11127a30120d7878570eb8acaaa5bad" },
+      "skills": ["./"]
+    },
+    {
+      "name": "argo-guide",
+      "description": "실제 앱을 자동으로 눌러 가며 녹화한 데모 영상 (shreyaskarnik/argo, MIT)",
+      "source": { "source": "github", "repo": "shreyaskarnik/argo", "sha": "5f715496522c4e682f4dc4aeffae5528e866ad5e" },
+      "license": "MIT",
+      "skills": ["./skills/argo-guide"]
+    },
+    {
+      "name": "explainroo",
+      "description": "영어 주제 설명 영상: 대본·목소리·그림·자막·썸네일 (vincentsch/explainroo, MIT)",
+      "source": { "source": "github", "repo": "vincentsch/explainroo", "sha": "e95232c8d535ed2aa390e7b1caee0d1326dd9e83" },
+      "license": "MIT",
+      "skills": ["./skills/explainroo"]
+    },
+    {
+      "name": "rossark-motion-skill",
+      "description": "앱 속 마스코트·아이콘 애니메이션 (rossark0/rossark-motion-skill, MIT)",
+      "source": { "source": "github", "repo": "rossark0/rossark-motion-skill", "sha": "9b20964e32f07f8ac7e2948cd175746fa4a7712f" },
+      "license": "MIT",
+      "skills": ["./"]
+    },
+    {
+      "name": "reanimate",
+      "description": "남의 사이트·영상 애니메이션을 내 코드로 복제하고 수치로 검증 (NiazMorshed2007/reanimate, MIT)",
+      "source": { "source": "github", "repo": "NiazMorshed2007/reanimate", "sha": "3f7a55a2986a84ca2173e86ee9127eefe31d046d" },
+      "license": "MIT",
+      "skills": ["./skills/reanimate"]
+    },
+    {
+      "name": "earshot",
+      "description": "소리를 글로 바꿔 판단: 효과음·음량·싱크 검사, 실제 녹음 사운드트랙 (Leonxlnx/earshot, MIT)",
+      "source": { "source": "github", "repo": "Leonxlnx/earshot", "sha": "591fa3e028032e6dce56620a20e932e35667e8d8" },
+      "license": "MIT",
+      "skills": ["./skills/earshot", "./skills/real-sound"]
+    },
+    {
+      "name": "watch",
+      "description": "참고 영상 분석: 프레임·자막·컷 (bradautomates/claude-video, MIT)",
+      "source": { "source": "github", "repo": "bradautomates/claude-video", "sha": "03ceb42f7fa2c4439aca01752118044baabffb8f" }
+    },
+    {
+      "name": "video-director",
+      "description": "영상 계획표 검사와 완성본 측정 검사 (win4r/video-director, MIT)",
+      "source": { "source": "github", "repo": "win4r/video-director", "sha": "4747e5c153509ef7f8f7fd1a0aad6acfda36280d" },
+      "license": "MIT",
+      "skills": ["./video-director"]
     }
   ]
 }

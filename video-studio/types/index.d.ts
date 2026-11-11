@@ -84,6 +84,14 @@ declare module 'claude-code' {
       suggestion: { text: string; at: number } | null
       /** 첫 화면 입력창에 쓰던 글. */
       draft: string
+      /** 영상 도구 첫 실행 준비(setup/prepare.sh)의 진행. */
+      prep: {
+        running: boolean
+        steps: Record<string, { status: 'doing' | 'done' | 'skip' | 'fail'; msg: string }>
+        current?: string
+        endedAt?: number
+        ok?: boolean
+      }
     }
   }
 }
