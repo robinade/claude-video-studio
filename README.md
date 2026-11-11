@@ -9,6 +9,18 @@
 
 > English: A Korean-language Claude Code mod that acts as a video director. Describe the video you need in one line; it picks the right video skill (huashu-motion, take-one, Argo, explainroo, rossark-motion-skill, reanimate, earshot, real-sound, watch, video-director, Kling), shows a progress board (plan → make → sound → check → done), blocks paid generation until you approve the cost, and measures the finished MP4 with `qa_video` and `earshot critique`.
 
+## 영상 감독실로 만든 영상
+
+모두 영상 감독실로 만든 실제 결과물이에요. 각 영상의 앞부분 7초 안팎을 GIF로 줄였어요(소리 없음). 따로 적지 않은 것은 huashu-motion 으로 만들었어요.
+
+<table>
+<tr><td align="center" valign="top"><img src="media/examples/parking-backin.gif" width="190" alt="주차왕 후진 주차 홍보 릴스 · 30초"><br><b>주차왕</b><br><sub>후진 주차 홍보 릴스 · 30초</sub></td><td align="center" valign="top"><img src="media/examples/parking-waiting.gif" width="190" alt="주차왕 「뒤차가 기다리면」 릴스 · 32초"><br><b>주차왕</b><br><sub>「뒤차가 기다리면」 릴스 · 32초</sub></td><td align="center" valign="top"><img src="media/examples/silgyeok-test.gif" width="190" alt="실격입니다 기능시험 스레드 영상 · 18초"><br><b>실격입니다</b><br><sub>기능시험 스레드 영상 · 18초</sub></td><td align="center" valign="top"><img src="media/examples/silgyeok-road.gif" width="190" alt="실격입니다 도로주행 소개 · 28초"><br><b>실격입니다</b><br><sub>도로주행 소개 · 28초</sub></td></tr>
+<tr><td align="center" valign="top"><img src="media/examples/dino-reel.gif" width="190" alt="다이노밸리 공룡 골짜기 홍보 릴스 · 27초"><br><b>다이노밸리</b><br><sub>공룡 골짜기 홍보 릴스 · 27초</sub></td><td align="center" valign="top"><img src="media/examples/dino-demo.gif" width="190" alt="다이노밸리 직접 걸어 본 데모 · 30초 (Argo)"><br><b>다이노밸리</b><br><sub>직접 걸어 본 데모 · 30초 (Argo)</sub></td><td align="center" valign="top"><img src="media/examples/wish.gif" width="190" alt="매일 소원 빌기 홍보 릴스 · 20초"><br><b>매일 소원 빌기</b><br><sub>홍보 릴스 · 20초</sub></td><td align="center" valign="top"><img src="media/examples/anjaga.gif" width="190" alt="앉아가요 지하철 자리 앱 홍보 릴스 · 25초"><br><b>앉아가요</b><br><sub>지하철 자리 앱 홍보 릴스 · 25초</sub></td></tr>
+<tr><td align="center" valign="top"><img src="media/examples/todo-demo.gif" width="190" alt="할 일 앱 눌러 가며 찍은 데모 · 30초 (Argo, 사람 손 없이)"><br><b>할 일 앱</b><br><sub>눌러 가며 찍은 데모 · 30초 (Argo, 사람 손 없이)</sub></td><td align="center" valign="top"><img src="media/examples/mascot-loop.gif" width="190" alt="마스코트 앱 속 대기 애니메이션 · 3초 반복 (rossark-motion-skill, 사람 손 없이)"><br><b>마스코트</b><br><sub>앱 속 대기 애니메이션 · 3초 반복 (rossark-motion-skill, 사람 손 없이)</sub></td></tr>
+</table>
+
+<table><tr><td align="center" valign="top"><img src="media/examples/dino-film.gif" width="400" alt="다이노밸리 가로 소개 영상 · 30초"><br><b>다이노밸리</b><br><sub>가로 소개 영상 · 30초</sub></td><td align="center" valign="top"><img src="media/examples/explainer-https.gif" width="400" alt="영어 설명 영상 공용 와이파이와 HTTPS · 33초 (explainroo)"><br><b>영어 설명 영상</b><br><sub>공용 와이파이와 HTTPS · 33초 (explainroo)</sub></td></tr></table>
+
 ## 무엇을 해 주나
 
 영상 스킬은 많은데, 요청마다 어떤 걸 써야 할지, 어디까지 됐는지, 돈은 드는지, 완성본이 괜찮은지 매번 따로 챙겨야 해요. 영상 감독실은 그걸 한곳에 모아요.
