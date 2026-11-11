@@ -11,7 +11,7 @@
 
 ## 영상 감독실로 만든 영상
 
-모두 영상 감독실로 만든 실제 결과물이에요. 각 영상의 앞부분 7초 안팎을 GIF로 줄였어요(소리 없음). 따로 적지 않은 것은 huashu-motion 으로 만들었어요.
+모두 영상 감독실로 만든 실제 결과물이에요. 영상 전체를 실제 길이 그대로 GIF로 옮겼어요(소리 없음). 따로 적지 않은 것은 huashu-motion 으로 만들었어요.
 
 <table>
 <tr><td align="center" valign="top"><img src="media/examples/parking-backin.gif" width="190" alt="주차왕 후진 주차 홍보 릴스 · 30초"><br><b>주차왕</b><br><sub>후진 주차 홍보 릴스 · 30초</sub></td><td align="center" valign="top"><img src="media/examples/parking-waiting.gif" width="190" alt="주차왕 「뒤차가 기다리면」 릴스 · 32초"><br><b>주차왕</b><br><sub>「뒤차가 기다리면」 릴스 · 32초</sub></td><td align="center" valign="top"><img src="media/examples/silgyeok-test.gif" width="190" alt="실격입니다 기능시험 스레드 영상 · 18초"><br><b>실격입니다</b><br><sub>기능시험 스레드 영상 · 18초</sub></td><td align="center" valign="top"><img src="media/examples/silgyeok-road.gif" width="190" alt="실격입니다 도로주행 소개 · 28초"><br><b>실격입니다</b><br><sub>도로주행 소개 · 28초</sub></td></tr>
