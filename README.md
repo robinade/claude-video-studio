@@ -1,5 +1,7 @@
 # 영상 감독실 (claude-video-studio)
 
+<p align="center"><img src="media/promo-reel.gif" width="320" alt="앱 폴더에서 /video 한 줄 → 추천 카드에서 1 → 계획·제작·소리·검사가 진행 보드에 채워지는 모습"><br><sub>이 홍보 릴스도 영상 감독실로 만들었어요</sub></p>
+
 **"어떤 영상이 필요해요?" 한 줄이면, 맞는 영상 도구를 골라 계획 → 제작 → 소리 → 검사 → 완성까지 진행 보드로 보여 주는 한국어 Claude Code mod.**
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
