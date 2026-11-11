@@ -223,7 +223,7 @@ export const workPrompt = (p: PlanInput, env: ToolEnv = DEFAULT_ENV): string => 
     `- ${VOICE_RULE[p.voice]}`,
     `- 돈 드는 서비스(Kling, ElevenLabs, OpenAI TTS, 이미지 모델)는 mcp__video-studio__ask_spend(project: "${p.id}")로 금액을 올리고 허락 메시지가 올 때까지 쓰지 않아요. 허락 없이 부르면 막혀요.`,
     '- 업로드·게시·설정 파일(CLAUDE.md) 수정은 하지 않아요.',
-    '- 스킬 이름은 설치 방식에 따라 `huashu-motion` 이나 `huashu-motion:huashu-motion` 처럼 앞에 플러그인 이름이 붙어 있을 수 있어요. Skill 도구 목록에 있는 이름 그대로 불러요.',
+    '- 스킬 이름은 설치 방식에 따라 `huashu-motion` 이나 `huashu-motion:huashu-motion` 처럼 앞에 플러그인 이름이 붙어 있을 수 있어요. Skill 도구 목록에 있는 이름 그대로 불러요. 필요한 스킬이 목록에 아예 없으면 방금 설치해서 아직 불러오지 않은 거예요: report 의 next_action 에 "입력창에 /reload-plugins 를 입력해 주세요"를 남기고, 사용자에게도 그렇게 말한 뒤 기다려요.',
     `- 검사 기준을 처음부터 지켜요(qa_video 가 재는 값이에요): 첫 3초 훅 글자 ${p.aspect === '16:9' ? '1080 높이' : '1080 폭'} 기준 84px 이상, 설명·CTA 글자 48px 이상, 글자와 바로 뒤 배경의 대비 7:1 이상(밝은 배경엔 진한 글자, 사진 위엔 진한 판), 음량 -14 LUFS(±1)·실제 최고점 -1 dBTP 이하. timeline.json 의 cuts 에는 딱 끊기는 컷만 적고(서서히 겹치는 전환은 빼요), 계획한 정적(silences)은 정말 -30 dBFS 아래로 비워요.`,
     p.auto
       ? '- 사람 손 없이 끝까지 가는 무인 모드예요. 사용자에게 묻지 말고 합리적인 기본값으로 정해서 끝까지 진행해요.'

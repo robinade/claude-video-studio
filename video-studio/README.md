@@ -61,6 +61,7 @@
 
 | 증상 | 해결 |
 |---|---|
+| 설치했는데 아무것도 안 보여요 / Claude 가 스킬을 못 찾아요 | 입력창에 `/reload-plugins` 를 입력하거나 Claude Code 를 다시 켜요(`/reload-skills` 아님). `/video-setup` 으로 도구 9종이 다 깔렸는지 볼 수 있어요 |
 | 패널이 안 보여요 | 터미널이 좁으면(110칸 미만) 저절로 열리지 않아요. `9` 나 `/video` 로 직접 열어요 |
 | 검사가 "qa_video 실행 실패" | `/video-setup` 으로 준비 상황을 확인하고 `/video-setup run` 으로 다시 준비해요. `ffmpeg`·`ffprobe` 가 `~/.local/bin` 이나 `/opt/homebrew/bin` 에 있어야 해요 |
 | 영상 도구 준비가 실패해요 | `~/video-studio/tools/prepare.log` 에 이유가 있어요. 인터넷이 끊겼으면 `/video-setup run` 으로 다시. 실패한 단계는 6시간 뒤 새 세션에서 저절로 다시 시도해요 |

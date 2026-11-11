@@ -62,3 +62,19 @@ export const shouldPrepare = (marker: unknown, now: number) => {
   const at = Date.parse(String(m.at ?? ''))
   return !Number.isFinite(at) || now - at > 6 * 3600_000
 }
+
+/** 영상 감독실과 함께 설치되는 영상 도구 플러그인 9종(마켓플레이스의 dependencies 와 같아요). */
+export const DEPS = [
+  'huashu-motion',
+  'take-one',
+  'argo-guide',
+  'explainroo',
+  'rossark-motion-skill',
+  'reanimate',
+  'earshot',
+  'watch',
+  'video-director',
+] as const
+
+/** 설치 기록에 없는 영상 도구 플러그인. */
+export const missingDeps = (installed: unknown) => DEPS.filter(n => !installPath(installed, n))

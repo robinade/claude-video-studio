@@ -6,7 +6,7 @@ import { DEFAULT_ENV, TAG, TOOLS, VOICE_LABEL, koreanWarnings, minutesText, size
 import type { ToolEnv } from './plan.ts'
 import { isVideoIntent, route } from './route.ts'
 import { clipWidth, displayWidth, padWidth } from './text.ts'
-import { STEP_LABEL, installPath, parsePrepLine, prepSummary, scriptDirs, shouldPrepare } from './tools.ts'
+import { DEPS, MARKET, STEP_LABEL, installPath, missingDeps, parsePrepLine, prepSummary, scriptDirs, shouldPrepare } from './tools.ts'
 import type { Prep, PrepStatus } from './tools.ts'
 
 const PLUGIN = 'video-studio'
@@ -282,9 +282,17 @@ const prepare = async ($: EngineInterface, auto: boolean): Promise<string> => {
   const toolsDir = `${h}/video-studio/tools`
   const t = await resolveTools($)
   if (auto) {
-    if ((await $.env.get('VIDEO_STUDIO_PREPARE')) === '0') return ''
     if (!installPath(t.installed, 'video-studio')) return ''
-    if (!shouldPrepare(await readJson($, `${toolsDir}/prepared.json`), await $.clock.now())) return ''
+    // 함께 설치됐어야 할 영상 도구가 빠졌으면(설치가 중간에 끊겼거나 지웠으면) 다시 설치하는 법을 알려요.
+    const missing = missingDeps(t.installed)
+    if (missing.length)
+      $.ui.toast(`🎬 영상 도구 ${missing.length}개가 없어요(${missing.join(', ')}) · /plugin install video-studio@${MARKET} 다시 실행 후 /reload-plugins`, { timeoutMs: 12000 })
+    if ((await $.env.get('VIDEO_STUDIO_PREPARE')) === '0') return ''
+    const marker = await readJson($, `${toolsDir}/prepared.json`)
+    if (!shouldPrepare(marker, await $.clock.now())) return ''
+    // 설치 뒤 처음 켜졌을 때 한 번: 무엇이 깔렸고 지금 무엇을 하는지.
+    if (!marker)
+      $.ui.toast(`🎬 영상 감독실이 켜졌어요 · 영상 도구 ${DEPS.length - missing.length}종 설치됨 · 준비물(최대 약 4GB)을 뒤에서 받는 중 · /video-setup`, { timeoutMs: 10000 })
   }
   const env: Record<string, string> = {
     VS_TOOLS: toolsDir,
@@ -354,8 +362,18 @@ const prepReport = async ($: EngineInterface) => {
     const icon = s ? (s.status === 'doing' ? '◐' : s.status === 'fail' ? '✗' : '●') : last === 'ok' ? '●' : last === 'fail' ? '✗' : '○'
     return `${icon} ${STEP_LABEL[k]}${s?.msg ? ` · ${s.msg}` : last ? ` · 지난 결과 ${last === 'ok' ? '준비됨' : '실패'}` : ''}`
   })
+  const installed = await installedPlugins($)
+  const viaMarket = !!installPath(installed, 'video-studio')
+  const missing = missingDeps(installed)
+  const plugins = !viaMarket
+    ? `영상 도구 플러그인: 이 영상 감독실은 --plugin-dir 로 불러서 도구 9종이 함께 설치되지 않았어요. 함께 쓰려면 /plugin install video-studio@${MARKET}`
+    : missing.length
+      ? `영상 도구 플러그인: ${DEPS.length}개 중 ${DEPS.length - missing.length}개 설치됨 · 없음: ${missing.join(', ')}\n  → /plugin install video-studio@${MARKET} 를 다시 실행한 뒤 /reload-plugins`
+      : `영상 도구 플러그인: ${DEPS.length}개 모두 설치됨 (스킬이 안 보이면 /reload-plugins)`
   return [
-    x.running ? '영상 도구 준비 중이에요.' : marker?.at ? `마지막 준비: ${marker.at}` : '아직 준비한 적이 없어요.',
+    plugins,
+    '',
+    x.running ? '준비물: 설치하는 중이에요.' : marker?.at ? `준비물: 마지막 준비 ${marker.at}` : '준비물: 아직 준비한 적이 없어요.',
     ...rows,
     `기록: ${h}/video-studio/tools/prepare.log`,
   ].join('\n')
@@ -474,7 +492,8 @@ export const runChecks = async ($: EngineInterface, id: string, video: string): 
 // ---------------------------------------------------------------- 등록
 
 const GUIDANCE = `# 영상 감독실 (video-studio mod)
-사용자가 영상을 만들거나 고치거나 검사해 달라고 하면(영상·릴스·쇼츠·데모·설명 영상·마스코트 애니메이션·효과음·배경음악 등), 작업을 시작하기 전에 mcp__video-studio__start 를 요청 원문으로 한 번 불러요. 돌려받은 지시문(도구·결과 폴더·단계)을 따르고, 단계마다 mcp__video-studio__report 로 보고해요. 이미 "${TAG} 프로젝트" 메시지로 시작한 일이면 start 를 다시 부르지 않아요. 돈 드는 서비스는 mcp__video-studio__ask_spend 로 허락을 받은 뒤에만 써요.`
+사용자가 영상을 만들거나 고치거나 검사해 달라고 하면(영상·릴스·쇼츠·데모·설명 영상·마스코트 애니메이션·효과음·배경음악 등), 작업을 시작하기 전에 mcp__video-studio__start 를 요청 원문으로 한 번 불러요. 돌려받은 지시문(도구·결과 폴더·단계)을 따르고, 단계마다 mcp__video-studio__report 로 보고해요. 이미 "${TAG} 프로젝트" 메시지로 시작한 일이면 start 를 다시 부르지 않아요. 돈 드는 서비스는 mcp__video-studio__ask_spend 로 허락을 받은 뒤에만 써요.
+영상 도구 스킬(huashu-motion, take-one, argo-guide, explainroo, rossark-motion-skill, reanimate, earshot, real-sound, watch, video-director)이 Skill 목록에 없으면 방금 설치해서 아직 불러오지 않은 거예요. 사용자에게 입력창에 \`/reload-plugins\` 를 입력해 달라고(또는 Claude Code 를 다시 켜 달라고) 안내해요. 준비물(파이썬 환경·모델) 상황은 \`/video-setup\` 으로 볼 수 있어요.`
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {

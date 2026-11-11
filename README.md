@@ -20,6 +20,8 @@
 | **입력창 위 띠** | `9: 🎬 영상 감독실 · 제작 중 · 5단계 중 2단계 끝 · 다음: …` |
 | **자동 검사** | 완성된 MP4를 `qa_video`(글자 크기·대비·번쩍임·컷 등)와 `earshot critique`(음량·소리 싱크)로 직접 재요 |
 
+> **빠른 시작:** `/plugin marketplace add robinade/claude-video-studio` → `/plugin install video-studio@claude-video-studio` → **`/reload-plugins`** → `/video 우리 앱 홍보 릴스 20초`
+
 이 mod는 영상 도구를 새로 만들지 않아요. 이미 공개된 영상 스킬들을 **고르고, 순서대로 시키고, 검사하는** 감독 역할이에요.
 
 ## 쓰는 법
@@ -92,13 +94,13 @@ macOS 에 아무것도 없는 상태에서 다 받으면 모두 약 4GB, 만든 
 1. `claude plugin marketplace add robinade/claude-video-studio`를 실행해. 이미 추가돼 있다고 나오면 다음 단계로 넘어가.
 2. `claude plugin install video-studio@claude-video-studio`를 실행해. 설치 범위는 기본값 user로 둬.
 3. `claude plugin list`로 video-studio와 함께 설치된 영상 도구 9종(huashu-motion, take-one, argo-guide, explainroo, rossark-motion-skill, reanimate, earshot, watch, video-director)이 모두 enabled인지 확인해.
-4. Claude Code를 다시 시작하면 영상 감독실이 영상 도구 준비물(파이썬 환경·소리 모델 등, 몇 GB)을 뒤에서 설치한다고 알려 줘. 진행은 `/video-setup`으로 볼 수 있어.
+4. 끝나면 나에게 입력창에 `/reload-plugins`를 입력하라고(또는 Claude Code를 다시 켜라고) 안내해 줘. `/reload-skills`가 아니라 `/reload-plugins`야. 그러면 영상 감독실이 켜지고, 영상 도구 준비물(파이썬 환경·소리 모델 등, 몇 GB)을 뒤에서 설치한다고 알려 줘. 진행은 `/video-setup`으로 볼 수 있어.
 
 지켜 줘.
 - `plugin` 명령이 "not run from this spelling"으로 거부되면 `claude`가 다른 프로그램의 래퍼라서 그래. `which -a claude`로 실제 실행 파일을 찾아 그걸로 다시 실행해.
 - 설정 파일은 건드리지 마.
 
-끝나면 설치한 버전과 건너뛰거나 실패한 단계를 알려 줘. 그리고 Claude Code를 다시 시작하면(또는 `/reload-plugins`) mod가 켜진다고 안내해 줘.
+끝나면 설치한 버전과 건너뛰거나 실패한 단계를 알려 줘.
 ```
 
 ### 직접 입력할 명령어
@@ -108,7 +110,17 @@ macOS 에 아무것도 없는 상태에서 다 받으면 모두 약 4GB, 만든 
 ```
 /plugin marketplace add robinade/claude-video-studio
 /plugin install video-studio@claude-video-studio
+/reload-plugins
 ```
+
+> **설치가 끝나면 꼭 `/reload-plugins`** 를 입력하세요(또는 Claude Code 를 껐다 켜기). 이걸 해야 이미 열려 있는 창에서 영상 감독실과 영상 도구 9종이 켜져요.
+> 비슷한 이름의 `/reload-skills` 는 `~/.claude/skills` 같은 폴더에 직접 넣은 스킬을 다시 읽는 명령이라, 플러그인으로 설치한 이 도구들에는 필요 없어요.
+
+설치가 잘 됐는지 확인하는 법:
+
+1. 입력창 위에 `🎬 영상 감독실 · 영상 도구 준비 중` 띠가 보이고, 몇 분 뒤 "영상 도구 준비 끝" 알림이 떠요.
+2. `/video-setup` 을 입력하면 `영상 도구 플러그인: 9개 모두 설치됨` 과 준비물 5개의 상태가 나와요.
+3. 영상을 부탁했는데 Claude 가 "스킬을 찾을 수 없다"고 하면 `/reload-plugins` 를 한 번 더 입력하세요.
 
 설치 없이 한 번만 써 보려면(이때는 영상 도구가 함께 설치되지 않아요):
 

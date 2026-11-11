@@ -4,7 +4,7 @@ import type { Engine } from 'claude-code/testing'
 
 import { bandLine, newProject, parseEar, parseQa, PAID_BASH, PAID_TOOL, pickActive, RENDER_BASH } from './register'
 import { displayWidth } from './text'
-import { PREP_VERSION, installPath, parsePrepLine, prepSummary, scriptDirs, shouldPrepare } from './tools'
+import { DEPS, PREP_VERSION, installPath, missingDeps, parsePrepLine, prepSummary, scriptDirs, shouldPrepare } from './tools'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
@@ -271,5 +271,37 @@ test('자동 검사는 마켓플레이스로 설치한 video-director 의 qa_vid
   await $.tool.call({ tool: 'mcp__video-studio__start', request: '앱 홍보 릴스 20초' })
   await $.tool.call({ tool: 'mcp__video-studio__report', stage: 'check', status: 'doing', artifact: '/Users/tester/video-studio/projects/x/final.mp4' })
   expect(ran.some(a => a.includes('/cache/vd/video-director/scripts/qa_video.py'))).toBe(true)
+  await ui.unmount()
+})
+
+test('빠진 영상 도구 찾기', () => {
+  expect(missingDeps(JSON.parse(installed(Object.fromEntries(DEPS.map(n => [n, `/c/${n}`])))))).toEqual([])
+  expect(missingDeps(JSON.parse(installed({ earshot: '/c/e' }))).length).toBe(DEPS.length - 1)
+  expect(missingDeps(undefined).length).toBe(DEPS.length)
+})
+
+test('설치 뒤 처음 켜지면 환영 알림, 빠진 도구가 있으면 다시 설치하고 /reload-plugins 하라고 알려요', async ($, on) => {
+  const toasts: string[] = []
+  on('ui.toast', async ($, e) => (toasts.push(e.text), { value: undefined }))
+  on('process.spawn', async function* () {
+    return { value: { code: 0, signal: null } }
+  } as never)
+  const all = Object.fromEntries([...DEPS, 'video-studio'].map(n => [n, `/c/${n}`]))
+  const { ui } = await world($, on, 'terminal', { reads: { [INSTALLED]: installed(all) } })
+  await flush()
+  expect(toasts.some(t => t.includes('영상 감독실이 켜졌어요') && t.includes('영상 도구 9종 설치됨'))).toBe(true)
+  expect(toasts.some(t => t.includes('/reload-plugins'))).toBe(false)
+  await ui.unmount()
+})
+
+test('빠진 영상 도구가 있으면 알림에 /reload-plugins 안내가 나와요', async ($, on) => {
+  const toasts: string[] = []
+  on('ui.toast', async ($, e) => (toasts.push(e.text), { value: undefined }))
+  on('process.spawn', async function* () {
+    return { value: { code: 0, signal: null } }
+  } as never)
+  const { ui } = await world($, on, 'terminal', { reads: { [INSTALLED]: installed({ 'video-studio': '/c/vs', earshot: '/c/e' }) } })
+  await flush()
+  expect(toasts.some(t => t.includes('영상 도구 8개가 없어요') && t.includes('/reload-plugins'))).toBe(true)
   await ui.unmount()
 })
